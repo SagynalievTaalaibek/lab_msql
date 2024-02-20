@@ -65,7 +65,13 @@ itemsRouter.post('/', imagesUpload.single('image'), async (req, res, next) => {
 
 itemsRouter.get('/', async (req, res, next) => {
   try {
+    const [result] = await mysqlDb.getConnection().query(
+      'SELECT i.id, i.name, c.name category_name, p.name place_name  FROM items i ' +
+      'LEFT JOIN resource.categories c on i.category_id = c.id ' +
+      'LEFT JOIN resource.places p on i.place_id = p.id'
+    );
 
+    res.send(result);
   } catch (e) {
     next(e);
   }
