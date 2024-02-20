@@ -102,7 +102,7 @@ placesRouter.delete('/:id', async (req, res, next) => {
       'SELECT * FROM items WHERE place_id = ?', [id]
     ) as RowDataPacket[];
 
-    if (items.row > 0) {
+    if (items) {
       return res.status(403).send({error: 'You can not delete this place'});
     }
 

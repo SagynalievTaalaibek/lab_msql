@@ -102,7 +102,7 @@ categoriesRouter.delete('/:id', async (req, res, next) => {
       'SELECT * FROM items WHERE category_id = ?', [id]
     ) as RowDataPacket[];
 
-    if (items.row > 0) {
+    if (items) {
       return res.status(403).send({error: 'You can not delete this category'});
     }
 
