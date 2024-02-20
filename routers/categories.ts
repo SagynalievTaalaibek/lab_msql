@@ -1,7 +1,7 @@
 import express from 'express';
-import {CategoryMutation} from '../types';
+import {ResultSetHeader, RowDataPacket} from 'mysql2';
 import mysqlDb from '../mysqlDb';
-import {ResultSetHeader} from 'mysql2';
+import {CategoryMutation} from '../types';
 
 const categoriesRouter = express.Router();
 
@@ -19,8 +19,7 @@ categoriesRouter.post('/', async (req, res, next) => {
     };
 
     const [result] = await mysqlDb.getConnection().query(
-      'INSERT INTO categories (name, description)' +
-      'VALUES (?, ?)',
+      'INSERT INTO categories (name, description) VALUES (?, ?)',
       [categoryData.name, categoryData.description],
     ) as ResultSetHeader[];
 
@@ -36,7 +35,7 @@ categoriesRouter.post('/', async (req, res, next) => {
 categoriesRouter.get('/', async (req, res, next) => {
   try {
     const [results] = await mysqlDb.getConnection().query(
-      'SELECT * FROM categories'
+      'SELECT id, name FROM categories'
     );
 
     res.send(results);
@@ -45,7 +44,82 @@ categoriesRouter.get('/', async (req, res, next) => {
   }
 });
 
+categoriesRouter.get('/:id', async (req, res, next) => {
+  try {
+    const id = req.params.id;
 
+    const [result] = await mysqlDb.getConnection().query(
+      'SELECT * FROM categories WHERE id = ?', [id]
+    ) as RowDataPacket[];
+
+    const category = result[0];
+
+    if (!category) {
+      return res.status(404).send({error: 'Not found!'});
+    }
+
+    return res.send(category);
+  } catch (e) {
+    next(e);
+  }
+});
+
+
+categoriesRouter.put('/:id', async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const categoryName = req.body.name;
+    const categoryDescription = req.body.description;
+
+    if (!categoryName) {
+      return res.status(422).send({error: 'Category name is not passed!'});
+    }
+
+    const [result] = await mysqlDb.getConnection().query(
+      'UPDATE categories SET name = ?, description = ? WHERE id = ?',
+      [categoryName, categoryDescription, id]
+    ) as ResultSetHeader[];
+
+    if (result.affectedRows === 0) {
+      return res.status(404).send({error: 'Category not found!'});
+    }
+
+    return res.send({
+      id,
+      name: categoryName,
+      description: categoryDescription,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+categoriesRouter.delete('/:id', async (req, res, next) => {
+  try {
+    const id = req.params.id;
+
+    const [items] = await mysqlDb.getConnection().query(
+      'SELECT * FROM items WHERE category_id = ?', [id]
+    ) as RowDataPacket[];
+
+    if (items.row > 0) {
+      return res.status(403).send({error: 'You can not delete this category'});
+    }
+
+    const [result] = await mysqlDb.getConnection().query(
+      'DELETE FROM categories WHERE id = ?',
+      [id]
+    ) as ResultSetHeader[];
+
+    if (result.affectedRows === 0) {
+      return res.status(404).send({error: 'Category not found!'});
+    }
+
+    return res.send({message: 'Category deleted!'});
+  } catch (e) {
+    next(e);
+  }
+})
 
 
 export default categoriesRouter;
